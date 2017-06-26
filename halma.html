@@ -1,0 +1,192 @@
+<!DOCTYPE HTML>
+<html>
+<head></head>
+<body>
+	<h1>Canvas Game</h1>
+	<p id ="moves"> Moves : <span id="movecnt">0</span></p>
+	<canvas id="c" width="451" height="451">
+	</canvas>
+	<script>
+		var kBoardWidth = 9;
+		var kBoardHeight= 9;
+		var kPieceWidth = 50;
+		var kPieceHeight= 50;
+		var kPixelWidth = 1 + (kBoardWidth * kPieceWidth);
+		var kPixelHeight= 1 + (kBoardHeight * kPieceHeight);
+		var gPieces;
+		var c = document.querySelector("#c");	
+		var gDrawingContext = c.getContext("2d");
+		var gMovesCountHTML = document.querySelector("#movecnt");
+		var gMoveCount = 0;
+		var gSelectedPieceHasMoved;
+		var gGameInProgress;
+		var gSelectedPieceIndex;
+
+		initGame();
+
+		function initGame(){
+			c.addEventListener("click", halmaOnClick, false);
+			newGame();
+		}
+
+		function Cell(row, column){
+			this.row = row;
+			this.column = column;
+		}
+
+		function newGame(){
+			gPieces = [
+				new Cell(kBoardHeight-3, 0),
+				new Cell(kBoardHeight-3, 1),
+				new Cell(kBoardHeight-3, 2),
+				new Cell(kBoardHeight-2, 0),
+				new Cell(kBoardHeight-2, 1),
+				new Cell(kBoardHeight-2, 2),
+				new Cell(kBoardHeight-1, 0),
+				new Cell(kBoardHeight-1, 1),
+				new Cell(kBoardHeight-1, 2)
+				];
+			drawboard();	
+			gMoveCount = 0;
+			gSelectedPieceHasMoved = false;
+			gGameInProgress = true;
+			gSelectedPieceIndex = -1;
+		}
+
+		function drawboard(){
+			if(gGameInProgress && isGameOver()){
+				endGame();
+			}
+			gDrawingContext.clearRect(0, 0, kPixelWidth, kPixelHeight);
+			gDrawingContext.beginPath();
+			//vertical lines
+			for(var w=0; w<=kPixelWidth; w+=kPieceWidth){
+				gDrawingContext.moveTo(w+.5,0);
+				gDrawingContext.lineTo(w+.5,kPixelHeight);
+			}
+			//horizontal lines
+			for(var h=0; h<=kPixelHeight; h+=kPieceHeight){
+				gDrawingContext.moveTo(0, h+0.5);
+				gDrawingContext.lineTo(kPixelWidth, h + 0.5);
+			}
+			gDrawingContext.strokeStyle = "blue";
+			gDrawingContext.stroke();
+
+			for (var i=0;i<9;i+=1) {
+					drawPiece(gPieces[i],gSelectedPieceIndex == i);		
+			}
+			gMovesCountHTML.innerHTML = gMoveCount;
+		}
+
+		function drawPiece(p, selected) {
+			var column = p.column;
+			var row = p.row;
+			var x = (column * kPieceWidth) + kPieceWidth/2;
+			var y = (row * kPieceHeight) + kPieceHeight/2;
+			var radius = kPieceWidth/2 - kPieceWidth/10;
+			gDrawingContext.beginPath();
+			gDrawingContext.arc(x, y, radius, 0, Math.PI*2, false);
+			gDrawingContext.closePath();
+			gDrawingContext.strokeStyle = "green";
+			gDrawingContext.stroke();
+			if(selected){
+				gDrawingContext.fillStyle = "green";
+				gDrawingContext.fill();
+			}
+		}
+
+		function halmaOnClick(e){
+			var cell = getCursorPosition(e);
+			console.log("Cell clicked");
+			console.log(cell);
+			var row = cell.row;
+			var column = cell.column;
+			for(var i=0;i<9;i++){
+				if((column == gPieces[i].row) && (row == gPieces[i].column)){
+					clickOnPiece(i);
+					return;
+				}
+			}
+			clickOnEmptyCell(new Cell(column, row));
+		}
+
+		function clickOnPiece(i){
+			gSelectedPieceIndex = i;
+			drawboard();
+			return;
+		}
+
+		function clickOnEmptyCell(cell){
+			if(gSelectedPieceIndex == -1) return;
+			var rowdiff = Math.abs(gPieces[gSelectedPieceIndex].row - cell.row);
+			var columnDiff = Math.abs(gPieces[gSelectedPieceIndex].column - cell.column);
+			console.log(rowdiff + " && " + columnDiff);
+			if((rowdiff <= 1)&&(columnDiff <= 1)){
+				gPieces[gSelectedPieceIndex].row  = cell.row;
+				gPieces[gSelectedPieceIndex].column = cell.column;
+				gMoveCount += 1;
+				gSelectedPieceIndex = -1;
+				drawboard();
+				return;
+			}
+			if((rowdiff <= 2)&&(columnDiff <= 2)){
+				if(isThereAPieceBetween(gSelectedPieceIndex, cell)){
+					gPieces[gSelectedPieceIndex].row  = cell.row;
+					gPieces[gSelectedPieceIndex].column = cell.column;
+					gMoveCount += 1;
+					gSelectedPieceIndex = -1;
+					drawboard();
+					return;
+				}
+			}
+			gSelectedPieceIndex = -1;
+			drawboard();
+			return;
+		}
+
+		function isThereAPieceBetween(i, cell){
+			var intRow = (gPieces[i].row + cell.row)/2;
+			var intCol = (gPieces[i].column + cell.column)/2;
+			for(var k = 0; k<9;k++){
+				if((gPieces[k].row == intRow) && (gPieces[k].column == intCol)){
+					return true;	
+				}
+			}
+			return false;
+		}
+
+		function getCursorPosition(e){
+			var x;
+			var y;
+			if(e.pageX !=undefined && e.pageY != undefined){
+				x = e.pageX;
+				y = e.pageY;
+			}else{
+				x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+				y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+			}	
+			x -= c.offsetLeft;
+			y -= c.offsetTop;
+			var cell = new Cell(Math.floor(x/kPieceWidth), Math.floor(y/kPieceHeight));
+			return cell;
+		}
+
+		function isGameOver(){
+			for(var i=0;i<9;i++){
+				var row = gPieces[i].row;
+				var column = gPieces[i].column;
+				if((row < kBoardWidth - 3)&&(column < kBoardHeight - 3)){
+					return false;
+				}
+			}
+			return true;
+		}
+
+		function endGame(){
+			gGameInProgress = false;
+			gGameInProgress = -1;
+		}
+
+</script>
+</body>
+</html>
