@@ -7,6 +7,7 @@
 	<canvas id="c" width="451" height="451">
 	</canvas>
 	<script>
+		var kNumPieces = 9;
 		var kBoardWidth = 9;
 		var kBoardHeight= 9;
 		var kPieceWidth = 50;
@@ -26,7 +27,8 @@
 
 		function initGame(){
 			c.addEventListener("click", halmaOnClick, false);
-			newGame();
+			if(!resumeGame())
+				newGame();
 		}
 
 		function Cell(row, column){
@@ -76,6 +78,7 @@
 					drawPiece(gPieces[i],gSelectedPieceIndex == i);		
 			}
 			gMovesCountHTML.innerHTML = gMoveCount;
+			saveGameState();
 		}
 
 		function drawPiece(p, selected) {
@@ -187,6 +190,41 @@
 			gGameInProgress = -1;
 		}
 
+		function supportsLocalStorage(){
+			return (('localStorage' in window) && (window.localStorage != null)) 
+		}
+
+		function saveGameState() {
+			if(!supportsLocalStorage)
+				return false;
+			localStorage.setItem('halma.gMoveCount',gMoveCount);
+			localStorage.setItem('halma.gGameInProgress',gGameInProgress);	
+			localStorage.setItem('halma.gSelectedPieceIndex',gSelectedPieceIndex);			
+			for(var i=0;i<9;i++){
+				localStorage.setItem('halma.piece' + i + 'row', gPieces[i].row);
+				localStorage.setItem('halma.piece' + i + 'column', gPieces[i].column);
+			}
+			return true;
+		}
+
+		function resumeGame(){
+			if(!supportsLocalStorage)
+				return false;
+			gGameInProgress = localStorage.getItem('halma.gGameInProgress')	
+			if(!gGameInProgress)
+				return false;
+			gMoveCount = localStorage.getItem('halma.gMoveCount');
+			gSelectedPieceIndex = localStorage.getItem('halma.gSelectedPieceIndex');			
+			var row, column;
+			gPieces = new Array(kNumPieces);
+			for(var i=0;i<9;i++){
+				row = localStorage.getItem('halma.piece' + i + 'row');
+				column = localStorage.getItem('halma.piece' + i + 'column');
+				gPieces[i] = new Cell(row, column);
+			}
+			drawboard();
+			return true;
+		}
 </script>
 </body>
 </html>
